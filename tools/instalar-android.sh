@@ -94,18 +94,37 @@ if [ -z "$ANDEV" ]; then
         info "Android fica com cerca de $ANDROID_GIB GB"
         [ "$ANDROID_GIB" -ge "$MIN_ANDROID_GIB" ] || die "Nao ha espaco suficiente para o Android (preciso de ${MIN_ANDROID_GIB} GB)."
 
-        say "A encolher o sistema de ficheiros do Fedora para $KEEP GB (pode demorar)..."
         # No Fedora atomico o /sysroot esta montado so de leitura; o resize
         # precisa de um ponto de montagem com escrita do mesmo btrfs.
         RWMNT=/var/mnt/fedora-btrfs
         mkdir -p "$RWMNT"
-        mountpoint -q "$RWMNT" || mount -o rw,subvolid=5 "$ROOTSRC" "$RWMNT" || true
-        if mountpoint -q "$RWMNT" && btrfs filesystem resize "${KEEP}g" "$RWMNT"; then
-            :
-        else
-            btrfs filesystem resize "${KEEP}g" /var
-        fi
+        mountpoint -q "$RWMNT" || mount -o rw,subvolid=5 "$ROOTSRC" "$RWMNT" 2>/dev/null || true
+        T="$RWMNT"; mountpoint -q "$T" || T=/var
+
+        # O btrfs espalha blocos pelo disco todo; primeiro junta-os no inicio
+        # (balance), depois encolhe aos poucos (4 GB de cada vez).
+        say "A arrumar o disco do Fedora (pode demorar 5 a 20 minutos)..."
+        btrfs balance start -dusage=0 -musage=0 "$T" >/dev/null 2>&1 || true
+        btrfs balance start -dusage=50 -musage=50 "$T" >/dev/null 2>&1 || true
+
+        say "A encolher o Fedora para $KEEP GB..."
+        SIZE=$(( $(btrfs filesystem show --raw "$T" | awk '/devid/{print $4; exit}') / 1073741824 ))
+        [ "$SIZE" -gt 0 ] || die "Nao consegui ler o tamanho do btrfs."
+        while [ "$SIZE" -gt "$KEEP" ]; do
+            NEXT=$(( SIZE - 4 )); [ "$NEXT" -lt "$KEEP" ] && NEXT=$KEEP
+            if btrfs filesystem resize "${NEXT}g" "$T" >/dev/null 2>&1; then
+                SIZE=$NEXT
+            else
+                btrfs balance start -dusage=90 -musage=90 "$T" >/dev/null 2>&1 || true
+                if btrfs filesystem resize "${NEXT}g" "$T" >/dev/null 2>&1; then SIZE=$NEXT; else break; fi
+            fi
+            info "Fedora agora com $SIZE GB"
+        done
         umount "$RWMNT" 2>/dev/null || true
+        KEEP=$SIZE
+        ANDROID_GIB=$(( PART_GIB - KEEP - 1 ))
+        [ "$ANDROID_GIB" -ge "$MIN_ANDROID_GIB" ] || die "So consegui encolher o Fedora para $KEEP GB - nao chega para o Android."
+        info "Fedora fica com $KEEP GB, Android com cerca de $ANDROID_GIB GB"
 
         # Particao do Fedora fica com KEEP+1 GiB (margem de seguranca)
         NEWSIZE_512=$(( (KEEP + 1) * 2097152 ))
