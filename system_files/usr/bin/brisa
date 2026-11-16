@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# brisa — comando de gestão do Brisa OS
+set -euo pipefail
+
+bold=$'\e[1m'; dim=$'\e[2m'; reset=$'\e[0m'
+
+usage() {
+    cat <<USAGE
+${bold}brisa${reset} — gestão do Brisa OS
+
+  brisa update      Descarrega a versão mais recente do sistema (aplica ao reiniciar)
+  brisa rollback    Volta à versão anterior do sistema (aplica ao reiniciar)
+  brisa status      Mostra a versão do sistema instalada
+  brisa claude      Instala ou atualiza o Claude Code
+  brisa apps        Atualiza as apps instaladas (Flatpak)
+  brisa ram         Mostra o uso de memória (RAM + zram)
+USAGE
+}
+
+case "${1:-}" in
+    update)
+        sudo bootc upgrade
+        flatpak update -y || true
+        echo "${bold}Pronto.${reset} Reinicia para usar a nova versão."
+        ;;
+    rollback)
+        sudo bootc rollback
+        echo "${bold}Pronto.${reset} Reinicia para voltar à versão anterior."
+        ;;
+    status)
+        sudo bootc status
+        ;;
+    claude)
+        if command -v claude >/dev/null 2>&1 || [ -x "$HOME/.local/bin/claude" ]; then
+            echo "A atualizar o Claude Code..."
+            "${HOME}/.local/bin/claude" update 2>/dev/null || claude update
+        else
+            echo "A instalar o Claude Code..."
+            curl -fsSL https://claude.ai/install.sh | bash
+        fi
+        echo "${dim}Abre um novo Terminal e escreve: claude${reset}"
+        ;;
+    apps)
+        flatpak update -y
+        ;;
+    ram)
+        free -h
+        echo
+        zramctl 2>/dev/null || true
+        ;;
+    ""|-h|--help|help)
+        usage
+        ;;
+    *)
+        echo "Comando desconhecido: $1"; echo; usage; exit 1
+        ;;
+esac

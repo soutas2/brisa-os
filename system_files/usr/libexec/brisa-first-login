@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Corre uma vez por utilizador, no primeiro login: instala o Claude Code.
+set -uo pipefail
+
+MARKER="${XDG_CONFIG_HOME:-$HOME/.config}/brisa/first-login-done"
+[ -f "$MARKER" ] && exit 0
+
+# Espera pela internet (até 5 minutos, para dar tempo de ligar o Wi-Fi)
+if ! nm-online -q -t 300; then
+    notify-send -i dialog-information "Brisa OS" \
+        "Sem internet. Quando ligares, abre o Terminal e escreve: brisa claude"
+    exit 0
+fi
+
+if /usr/bin/brisa claude >/dev/null 2>&1; then
+    notify-send -i emblem-ok-symbolic "Brisa OS" \
+        "Claude Code instalado. Abre o Terminal e escreve: claude"
+    mkdir -p "$(dirname "$MARKER")"
+    touch "$MARKER"
+else
+    notify-send -i dialog-warning "Brisa OS" \
+        "Não foi possível instalar o Claude Code. Tenta no Terminal: brisa claude"
+fi

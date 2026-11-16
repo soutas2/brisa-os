@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Brisa OS — primeiro arranque
+Exec=/usr/libexec/brisa-first-login
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Phase=Applications

@@ -1,0 +1,49 @@
+# Constrói a imagem do Brisa OS e publica-a no GitHub Container Registry.
+# Corre a cada push, todos os dias (para trazer atualizações do Fedora) e à mão.
+name: Construir Brisa OS
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md']
+  schedule:
+    - cron: '30 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Libertar espaço em disco
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Nome da imagem
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE=ghcr.io/${OWNER}/${NAME}" >> "$GITHUB_ENV"
+
+      - name: Construir
+        run: |
+          podman build --pull=newer \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            --label "org.opencontainers.image.title=Brisa OS" \
+            -t "${IMAGE}:latest" -t "${IMAGE}:$(date -u +%Y%m%d)" .
+
+      - name: Publicar
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+          podman push "${IMAGE}:latest"
+          podman push "${IMAGE}:$(date -u +%Y%m%d)"

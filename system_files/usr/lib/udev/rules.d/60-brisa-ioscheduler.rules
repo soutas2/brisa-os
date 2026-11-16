@@ -1,0 +1,3 @@
+# eMMC (versão de 64 GB): o escalonador BFQ mantém a interface fluida
+# enquanto há escrita/leitura pesada no disco.
+ACTION=="add|change", KERNEL=="mmcblk[0-9]", ATTR{queue/scheduler}="bfq"
