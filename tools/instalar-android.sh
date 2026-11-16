@@ -3,10 +3,10 @@
 # a partir do Fedora/Brisa OS ja instalado.
 #
 # O que faz:
-#   1. Encolhe a particao do Fedora (fica so com ~15 GB, como sistema de emergencia).
+#   1. Encolhe o Fedora ao minimo (fica escondido, so para emergencias).
 #   2. Cria uma particao ext4 "ANDROID" com o resto do disco.
 #   3. Descarrega o Bliss OS (2,4 GB), verifica o SHA-256 e copia-o para la.
-#   4. Poe o Android como opcao por omissao no menu de arranque (GRUB).
+#   4. O Surface passa a arrancar direto para o Android, sem menu.
 #
 # Pode ser corrido varias vezes: retoma onde ficou.
 #
@@ -86,8 +86,8 @@ if [ -z "$ANDEV" ]; then
         sync
 
         USED=$(df -B1 --output=used "$ROOTMNT" | tail -1 | tr -d ' ')
-        KEEP=$(( USED / 1073741824 + 7 ))
-        [ "$KEEP" -lt 15 ] && KEEP=15
+        KEEP=$(( USED / 1073741824 + 4 ))
+        [ "$KEEP" -lt 10 ] && KEEP=10
         PART_GIB=$(( PSIZE * 512 / 1073741824 ))
         ANDROID_GIB=$(( PART_GIB - KEEP - 1 ))
         info "Fedora usa $(( USED / 1073741824 )) GB -> fica com $KEEP GB"
@@ -189,6 +189,10 @@ if [ -f "$TARGET" ]; then
 fi
 cat >> "$TARGET" <<'EOF'
 ### BRISA-ANDROID BEGIN
+# Arranque direto para o Android: menu escondido (Esc num teclado mostra-o).
+set default=brisa-android
+set timeout_style=hidden
+set timeout=1
 menuentry "Android (Bliss OS)" --id brisa-android --class android {
     insmod part_gpt
     insmod ext2
@@ -217,5 +221,5 @@ grep -q 'saved_entry' "$GRUBDIR/grub.cfg" || info "AVISO: o grub.cfg pode ignora
 
 printf '\n\033[1;32mANDROID INSTALADO!\033[0m\n\n'
 printf 'Reinicia com:  systemctl reboot\n'
-printf 'O menu aparece 5 segundos e arranca o Android sozinho.\n'
+printf 'O Surface arranca direto para o Android (sem menu).\n'
 printf 'O primeiro arranque demora 2 a 5 minutos.\n\n'
