@@ -16,12 +16,12 @@ printf '\033[1;36m=== Instalar Android no Surface ===\033[0m\n\n'
 printf 'Vai pedir a tua palavra-passe (nao aparece nada enquanto escreves).\n\n'
 
 SCRIPT=/tmp/instalar-android.sh
-if curl -fsSL https://raw.githubusercontent.com/soutas2/brisa-os/main/tools/instalar-android.sh -o "$SCRIPT" 2>/dev/null; then
-    :
-elif [ -f "$HERE/android-script.sh" ]; then
+if [ -f "$HERE/android-script.sh" ]; then
     cp "$HERE/android-script.sh" "$SCRIPT"
+elif curl -fsSL https://raw.githubusercontent.com/soutas2/brisa-os/main/tools/instalar-android.sh -o "$SCRIPT" 2>/dev/null; then
+    :
 else
-    printf '\033[1;31mSem internet. Liga o Wi-Fi e tenta outra vez.\033[0m\n'
+    printf '\033[1;31mNao encontrei o instalador. Liga o Wi-Fi e tenta outra vez.\033[0m\n'
     read -rp 'Carrega Enter para fechar...'
     exit 1
 fi
