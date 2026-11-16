@@ -95,7 +95,17 @@ if [ -z "$ANDEV" ]; then
         [ "$ANDROID_GIB" -ge "$MIN_ANDROID_GIB" ] || die "Nao ha espaco suficiente para o Android (preciso de ${MIN_ANDROID_GIB} GB)."
 
         say "A encolher o sistema de ficheiros do Fedora para $KEEP GB (pode demorar)..."
-        btrfs filesystem resize "${KEEP}g" "$ROOTMNT"
+        # No Fedora atomico o /sysroot esta montado so de leitura; o resize
+        # precisa de um ponto de montagem com escrita do mesmo btrfs.
+        RWMNT=/var/mnt/fedora-btrfs
+        mkdir -p "$RWMNT"
+        mountpoint -q "$RWMNT" || mount -o rw,subvolid=5 "$ROOTSRC" "$RWMNT" || true
+        if mountpoint -q "$RWMNT" && btrfs filesystem resize "${KEEP}g" "$RWMNT"; then
+            :
+        else
+            btrfs filesystem resize "${KEEP}g" /var
+        fi
+        umount "$RWMNT" 2>/dev/null || true
 
         # Particao do Fedora fica com KEEP+1 GiB (margem de seguranca)
         NEWSIZE_512=$(( (KEEP + 1) * 2097152 ))
