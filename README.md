@@ -61,6 +61,9 @@ disk_config/iso.toml          configuração do instalador
 
 ### 2. Criar a pen de instalação
 
+> **Nota (nov. 2026):** o `bootc-image-builder` ainda não suporta Fedora 45, por isso
+> o workflow "Criar ISO" falha de momento. Usa a **Opção B**.
+
 **Opção A — ISO do Brisa OS (tudo de uma vez)**
 
 1. **Actions** → **Criar ISO** → **Run workflow**. Demora cerca de 20 a 30 min.
